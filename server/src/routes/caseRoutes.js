@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { CaseController } from '../controllers/caseController.js';
+import { RemedyController } from '../controllers/remedyController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -15,9 +16,14 @@ router.patch('/:id', CaseController.updateCase);
 router.delete('/:id', CaseController.deleteCase);
 router.post('/:id/sync', CaseController.syncCaseProject);
 
+// Section 18 Remedy Calculations
+router.post('/:id/calculate-remedy', RemedyController.calculateRemedy);
+router.get('/:id/remedy-history', RemedyController.getRemedyHistory);
+
 // Payments
 router.post('/:id/payments', CaseController.addPayment);
 router.get('/:id/payments', CaseController.getPayments);
 router.delete('/:id/payments/:paymentId', CaseController.deletePayment);
 
 export default router;
+

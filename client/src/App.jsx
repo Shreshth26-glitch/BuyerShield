@@ -9,6 +9,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CaseDetailPage } from './pages/CaseDetailPage';
 import { AdminSyncPage } from './pages/AdminSyncPage';
+import { AdminInterestRatesPage } from './pages/AdminInterestRatesPage';
 import { SmoothScroll } from './components/SmoothScroll';
 import { PageTransition } from './components/PageTransition';
 
@@ -92,6 +93,14 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <AdminSyncPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/interest-rates"
+              element={
+                <ProtectedRoute>
+                  <AdminInterestRatesPage />
                 </ProtectedRoute>
               }
             />

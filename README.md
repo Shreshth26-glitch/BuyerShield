@@ -76,6 +76,29 @@ When developers delay project possession, Section 18 grants allottees the uncond
   - Prominent Section 18 statutory discrepancy warning box explaining that the agreement date legally supersedes unilateral portal extensions.
   - Dynamic on-demand sync button with inline status alerts.
 
+### Phase 4 — Statutory Remedy & Interest Ledger Calculator
+- **Pure Deterministic Calculation Engine (`remedyMath.js`)**:
+  - Zero AI / LLM involvement: 100% deterministic pure mathematical functions.
+  - **Integer-Paise Precision**: Internal calculations performed in integer paise to eliminate floating-point drift.
+  - **Section 18(1) Remedy A (Withdraw)**: Full refund of capital paid plus simple interest accrued from the delay start date to today at the state statutory rate.
+  - **Section 18(1) Remedy B (Continue & Claim Interest)**: Month-by-month accrued delay interest schedule, itemizing each calendar billing cycle's elapsed days and accrued interest. Guaranteed zero rounding drift between the sum of itemized rows and the displayed total.
+- **Dynamic State Interest Rate Policies**:
+  - Configurable `interest_rate_policies` schema storing base benchmark rates (e.g. SBI Highest MCLR at 9.10%), statutory spread (+2.00%), effective dates, and authority circular URLs (MahaRERA Rule 18, K-RERA Rule 16).
+  - Pure typed error handling: Throws typed `PolicyNotFoundError` if an unconfigured state or date is requested rather than guessing or defaulting to 0%.
+- **Evidentiary Calculation Audit Log (`remedy_calculations`)**:
+  - Every calculation run persists an immutable timestamped record with applied rate, principal base, delay dates, and full itemized JSON breakdown. Recalculation appends to history without overwriting prior runs.
+- **Guardrails & Security**:
+  - Strictly blocks calculation if the contractual handover date has not yet passed (`today <= promised_date`), returning typed HTTP 400 `NOT_YET_DELAYED`.
+  - User isolation: All foreign case calculation attempts return HTTP 404.
+- **Frontend Dossier Assessment & Options UI**:
+  - **Side-by-Side Comparative Options**: Option 01 (Withdraw) vs. Option 02 (Continue & Claim Interest) rendered side-by-side using `<NumberedColumn>` and `<StatBlock>`.
+  - **Itemized Monthly Breakdown Table**: Hairline-divided schedule displaying each billing cycle, period days, and exact rupee accrual.
+  - **Permanent Civic Disclaimer Banner**: Reusable, non-dismissible `<RemedyDisclaimer>` band anchored directly above the options.
+  - **Neutrality Advisory**: Explicit statutory neutrality label: *"These are your two statutory options under Section 18 of the Act, not a legal recommendation of which to choose."*
+  - **Audit Trail Modal**: Slide-over ledger showing chronological past calculation runs with timestamps and applied parameters.
+- **Admin Rate Policy Management (`/admin/interest-rates`)**:
+  - Dedicated CRUD console for state benchmark policies with source circular links and human-curation advisories.
+
 ---
 
 ## Technology Stack
@@ -212,6 +235,9 @@ node server/test/phase2_test.js
 
 # Phase 3: Adapters, reconciliation engine, retry policies, rate limiting, and admin telemetry
 node server/test/phase3_test.js
+
+# Phase 4: Deterministic pure math, zero-drift breakdown, guardrails, audit logging, and admin rates CRUD
+node server/test/phase4_test.js
 ```
 
 Verify frontend linting and production build:
@@ -228,7 +254,7 @@ npm --prefix client run build
 - [x] **Phase 1B: Motion & Premium Feel Layer** (GSAP hero timeline, ScrollTrigger reveals, Lenis smooth scroll, Three.js hero wireframe)
 - [x] **Phase 2: Core Data & Manual Case Management** (Project search & duplicate prevention, case dossiers, payment ledger, derived days delayed)
 - [x] **Phase 3: RERA Portal Ingestion Pipeline & Reconciliation** (MahaRERA & K-RERA adapters, resilient sync retry, reconciliation mismatch detection, admin telemetry)
-- [ ] **Phase 4: Statutory Remedy & Interest Ledger Calculator** (Rule-mandated SBI Highest MCLR + 200 bps compounding computation)
+- [x] **Phase 4: Statutory Remedy & Interest Ledger Calculator** (Deterministic integer-paise math, month-by-month zero drift, audit trail, disclaimer banner, admin rate policies)
 - [ ] **Phase 5: RAG Legal Precedents & Citation Engine** (Vector semantic search over Supreme Court and state RERA tribunal orders)
 - [ ] **Phase 6: Section 31 Formal Complaint Generator** (Pre-formatted Form M / Form N legal draft export for tribunal filing)
 

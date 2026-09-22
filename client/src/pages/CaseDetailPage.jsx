@@ -15,7 +15,10 @@ import {
   Scale,
   ShieldCheck,
   RefreshCw,
+  History,
+  Info,
 } from 'lucide-react';
+import { RemedyDisclaimer } from '../components/RemedyDisclaimer';
 import { gsap, prefersReducedMotion } from '../utils/motion';
 
 const formatINR = (val) => {
@@ -59,6 +62,52 @@ export const CaseDetailPage = () => {
   // On-demand portal sync state
   const [syncing, setSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null); // { type: 'success' | 'warning' | 'error', message: string }
+
+  // Section 18 Remedy Calculator State
+  const [remedyData, setRemedyData] = useState(null);
+  const [calculatingRemedy, setCalculatingRemedy] = useState(false);
+  const [remedyError, setRemedyError] = useState(null);
+  const [remedyHistory, setRemedyHistory] = useState([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const fetchRemedyHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await authFetch(`/api/cases/${id}/remedy-history`);
+      if (res.ok) {
+        const json = await res.json();
+        setRemedyHistory(json.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch calculation history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleCalculateRemedy = async () => {
+    setCalculatingRemedy(true);
+    setRemedyError(null);
+    try {
+      const res = await authFetch(`/api/cases/${id}/calculate-remedy`, {
+        method: 'POST',
+        body: JSON.stringify({ remedyType: 'both' }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setRemedyData(json.data);
+        fetchRemedyHistory();
+      } else {
+        setRemedyError(json.error || 'Failed to compute Section 18 remedies.');
+      }
+    } catch (err) {
+      console.error('Remedy calculation error:', err);
+      setRemedyError('Network error connecting to statutory calculator.');
+    } finally {
+      setCalculatingRemedy(false);
+    }
+  };
 
   const statsRowRef = useRef(null);
   const timelineRef = useRef(null);
@@ -120,6 +169,10 @@ export const CaseDetailPage = () => {
       const json = await res.json();
       if (res.ok) {
         setCaseData(json.data);
+        if (json.data && json.data.days_delayed > 0) {
+          handleCalculateRemedy();
+        }
+        fetchRemedyHistory();
       } else {
         setError(json.error || 'Failed to retrieve case details.');
       }
@@ -645,7 +698,263 @@ export const CaseDetailPage = () => {
         </div>
 
         {/* =================================================================== */}
-        {/* 3. FUTURE SCOPE PLACEHOLDERS (Phase 5 & 6 Coming Soon)             */}
+        {/* 3. SECTION 18 STATUTORY REMEDY CALCULATOR (YOUR OPTIONS)           */}
+        {/* =================================================================== */}
+        <div id="remedy-section" className="space-y-6">
+          
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <EyebrowLabel variant="primary" text="SECTION 18 STATUTORY OPTIONS" />
+                <Badge variant={isDelayed ? 'warning' : 'neutral'}>
+                  {isDelayed ? 'REMEDY ACTIVE' : 'PRE-DEFAULT'}
+                </Badge>
+                {remedyData?.policy && (
+                  <span className="font-mono text-xs text-accent-primary">
+                    Rate: {remedyData.policy.totalRate}% p.a. ({remedyData.policy.benchmarkName} + {remedyData.policy.addedPercentage}%)
+                  </span>
+                )}
+              </div>
+              <h2 className="font-serif text-2xl font-bold text-text-primary">
+                Statutory Remedy Computation
+              </h2>
+              <p className="text-xs text-text-secondary mt-0.5 font-sans">
+                Deterministic Section 18 calculations based on your audited disbursement ledger ({formatINR(caseData.total_paid)}) and the official rate policy on record for {caseData.state}.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2.5 self-start sm:self-center">
+              {remedyHistory.length > 0 && (
+                <button
+                  onClick={() => setShowHistoryModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-card hover:bg-page border border-border text-xs font-mono uppercase tracking-wider text-text-secondary hover:text-text-primary transition-colors"
+                  title="View immutable calculation audit trail"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Audit Trail ({remedyHistory.length})</span>
+                </button>
+              )}
+
+              {isDelayed && (
+                <button
+                  onClick={handleCalculateRemedy}
+                  disabled={calculatingRemedy}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-[#162D20] text-[#F7F2E9] text-xs font-mono uppercase tracking-wider border border-accent-primary disabled:opacity-50 transition-colors"
+                  title="Re-run calculation against latest date and payment ledger"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${calculatingRemedy ? 'animate-spin' : ''}`} />
+                  <span>{calculatingRemedy ? 'Calculating...' : 'Recalculate'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Permanent Civic Disclaimer Banner (Non-Dismissible) */}
+          <RemedyDisclaimer
+            state={caseData.state}
+            benchmark={remedyData?.policy?.benchmarkName || 'SBI Highest MCLR'}
+            spread={`${remedyData?.policy?.addedPercentage || '2.00'}%`}
+          />
+
+          {/* Neutrality Advisory Note */}
+          <div className="bg-page border border-border px-4 py-3 text-xs font-mono text-text-secondary flex items-center gap-2">
+            <Info className="w-4 h-4 text-accent-primary shrink-0" />
+            <span>
+              <strong>Neutral Advisory:</strong> These are your two statutory options under Section 18 of the Act, not a legal recommendation of which to choose.
+            </span>
+          </div>
+
+          {/* Remedy Error Banner if any */}
+          {remedyError && (
+            <div className="p-4 bg-accent-warning-bg border border-accent-warning/40 text-accent-warning text-xs font-mono flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{remedyError}</span>
+            </div>
+          )}
+
+          {!isDelayed ? (
+            /* Pre-Default Case State */
+            <div className="bg-card border border-border p-8 text-center space-y-3">
+              <ShieldCheck className="w-10 h-10 text-accent-primary mx-auto" />
+              <h3 className="font-serif text-lg font-bold text-text-primary">
+                Contractual Possession Target Unbreached
+              </h3>
+              <p className="text-xs text-text-secondary max-w-lg mx-auto font-sans leading-relaxed">
+                The agreed delivery deadline ({formatDate(caseData.promised_date_from_agreement)}) has not yet arrived. Statutory remedies under Section 18 activate automatically if the promoter fails to deliver possession with a certified Occupancy Certificate by this target.
+              </p>
+            </div>
+          ) : (
+            /* Delayed Case: Side-by-Side Two Options */
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* OPTION 01: WITHDRAW */}
+                <div className="bg-card border border-border p-6 flex flex-col justify-between space-y-5">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-accent-primary uppercase tracking-eyebrow">
+                        OPTION 01 • SECTION 18(1)
+                      </span>
+                      <Badge variant="primary">WITHDRAW</Badge>
+                    </div>
+
+                    <h3 className="font-serif text-xl font-bold text-text-primary">
+                      Withdraw from Project & Full Refund
+                    </h3>
+                    <p className="text-xs text-text-secondary leading-relaxed font-sans">
+                      Exercise your statutory right to cancel the booking and claim a 100% refund of all disbursed capital plus simple interest for the entire period held at the state-notified rate.
+                    </p>
+
+                    <div className="pt-2">
+                      <StatBlock
+                        label="Total Statutory Refund Entitlement"
+                        value={formatINR(remedyData?.withdraw?.totalAmount)}
+                        sublabel={`Principal ${formatINR(remedyData?.principalAmount || caseData.total_paid)} + Interest ${formatINR(remedyData?.withdraw?.interestAmount)}`}
+                        variant="primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border pt-4 text-xs font-mono space-y-1.5 text-text-secondary bg-page p-3 border">
+                    <div className="flex justify-between">
+                      <span>Audited Principal Refund:</span>
+                      <strong className="text-text-primary">{formatINR(remedyData?.principalAmount || caseData.total_paid)}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Simple Interest Accrued:</span>
+                      <strong className="text-text-primary">{formatINR(remedyData?.withdraw?.interestAmount)}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Accrual Days Elapsed:</span>
+                      <strong className="text-text-primary">{remedyData?.withdraw?.daysElapsed || caseData.days_delayed} Days</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Statutory Rate Applied:</span>
+                      <strong className="text-accent-primary">{remedyData?.policy?.totalRate || '11.10'}% p.a.</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* OPTION 02: CONTINUE & CLAIM MONTHLY DELAY INTEREST */}
+                <div className="bg-card border border-border p-6 flex flex-col justify-between space-y-5">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-accent-warning uppercase tracking-eyebrow">
+                        OPTION 02 • SECTION 18(1) PROVISO
+                      </span>
+                      <Badge variant="warning">CONTINUE BOOKING</Badge>
+                    </div>
+
+                    <h3 className="font-serif text-xl font-bold text-text-primary">
+                      Retain Unit & Claim Monthly Delay Interest
+                    </h3>
+                    <p className="text-xs text-text-secondary leading-relaxed font-sans">
+                      Keep your allotment and claim statutory interest for every single month of delay from the agreed date until physical handover with a valid Occupancy Certificate.
+                    </p>
+
+                    <div className="pt-2">
+                      <StatBlock
+                        label="Total Delay Interest Accrued So Far"
+                        value={formatINR(remedyData?.continue?.totalAccruedSoFar)}
+                        sublabel={`Benchmark run-rate: ${formatINR(remedyData?.continue?.monthlyInterestAmount)} / month`}
+                        variant="warning"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border pt-4 text-xs font-mono space-y-1.5 text-text-secondary bg-page p-3 border">
+                    <div className="flex justify-between">
+                      <span>Standard Monthly Payout:</span>
+                      <strong className="text-text-primary">{formatINR(remedyData?.continue?.monthlyInterestAmount)} / mo</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Delay Cycles:</span>
+                      <strong className="text-text-primary">{remedyData?.continue?.monthsElapsed || 0} Month(s)</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Accrual Days:</span>
+                      <strong className="text-text-primary">{remedyData?.continue?.totalDays || caseData.days_delayed} Days</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Payout Nature:</span>
+                      <strong className="text-text-primary">Payable monthly (not lump sum)</strong>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Month-by-Month Breakdown Table */}
+              {remedyData?.continue?.breakdown && remedyData.continue.breakdown.length > 0 && (
+                <div className="bg-card border border-border p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
+                    <div>
+                      <div className="font-mono text-[11px] uppercase tracking-eyebrow text-text-secondary font-semibold">
+                        OPTION 02 ITEMIZATION SCHEDULE
+                      </div>
+                      <h4 className="font-serif text-lg font-bold text-text-primary">
+                        Month-by-Month Accrued Delay Interest Breakdown
+                      </h4>
+                    </div>
+                    <span className="font-mono text-xs text-text-secondary">
+                      {remedyData.continue.breakdown.length} Billing Periods • Verified Zero Rounding Drift
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+                    <table className="w-full text-left border-collapse text-xs font-mono">
+                      <thead className="sticky top-0 bg-page z-10">
+                        <tr className="border-b border-border text-[11px] uppercase tracking-eyebrow text-text-secondary">
+                          <th className="py-2.5 px-4">Billing Month</th>
+                          <th className="py-2.5 px-4">Effective Date Interval</th>
+                          <th className="py-2.5 px-4 text-center">Days Delayed</th>
+                          <th className="py-2.5 px-4 text-right">Interest Accrued (₹)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {remedyData.continue.breakdown.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-page/50 transition-colors">
+                            <td className="py-2.5 px-4 font-bold text-text-primary">
+                              {row.month}
+                            </td>
+                            <td className="py-2.5 px-4 text-text-secondary">
+                              {row.startDate} → {row.endDate}
+                            </td>
+                            <td className="py-2.5 px-4 text-center text-text-secondary font-bold">
+                              {row.days} d
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-bold text-text-primary">
+                              {formatINR(row.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="sticky bottom-0 bg-page z-10 border-t-2 border-border font-bold">
+                        <tr>
+                          <td className="py-3 px-4 uppercase text-text-primary" colSpan="2">
+                            TOTAL ACCRUED DELAY INTEREST
+                          </td>
+                          <td className="py-3 px-4 text-center text-text-primary">
+                            {remedyData.continue.totalDays} Days
+                          </td>
+                          <td className="py-3 px-4 text-right text-accent-warning text-sm font-mono">
+                            {formatINR(remedyData.continue.totalAccruedSoFar)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>
+
+        {/* =================================================================== */}
+        {/* 4. FUTURE SCOPE PLACEHOLDERS (Phase 5 & 6 Coming Soon)             */}
         {/* =================================================================== */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
@@ -694,6 +1003,95 @@ export const CaseDetailPage = () => {
         </div>
 
       </div>
+
+      {/* Calculation Audit Trail Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border max-w-2xl w-full p-6 space-y-4 animate-fade-in max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-eyebrow text-text-secondary font-semibold">
+                  EVIDENTIARY AUDIT LOG
+                </div>
+                <h3 className="font-serif text-xl font-bold text-text-primary">
+                  Calculation Run History
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-text-secondary hover:text-text-primary font-mono text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-text-secondary font-sans leading-relaxed">
+              Every execution of the Section 18 calculation engine is immutably recorded in the database. This chronological audit trail demonstrates timestamped calculations before regulatory authorities.
+            </p>
+
+            <div className="overflow-x-auto flex-1 overflow-y-auto border border-border">
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead className="bg-page sticky top-0 border-b border-border text-[11px] uppercase tracking-eyebrow text-text-secondary">
+                  <tr>
+                    <th className="py-2.5 px-3">Run Timestamp</th>
+                    <th className="py-2.5 px-3">Remedy Type</th>
+                    <th className="py-2.5 px-3">Principal Base</th>
+                    <th className="py-2.5 px-3">Rate</th>
+                    <th className="py-2.5 px-3 text-right">Computed Figure</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {historyLoading ? (
+                    <tr>
+                      <td colSpan="5" className="py-8 text-center text-text-secondary">
+                        Loading calculation audit trail...
+                      </td>
+                    </tr>
+                  ) : remedyHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="py-8 text-center text-text-secondary">
+                        No prior calculations recorded on audit log.
+                      </td>
+                    </tr>
+                  ) : (
+                    remedyHistory.map((run) => (
+                      <tr key={run.id} className="hover:bg-page/50">
+                        <td className="py-2.5 px-3 text-text-secondary">
+                          {formatDate(run.calculated_at)}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold uppercase">
+                          <Badge variant={run.remedy_type === 'withdraw' ? 'primary' : 'warning'}>
+                            {run.remedy_type}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-3 text-text-primary">
+                          {formatINR(run.principal_amount)}
+                        </td>
+                        <td className="py-2.5 px-3 text-accent-primary font-bold">
+                          {run.applicable_rate}%
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-bold text-text-primary">
+                          {formatINR(run.computed_amount)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="px-4 py-2 border border-border text-xs font-mono uppercase tracking-wider text-text-secondary hover:bg-page transition-colors"
+              >
+                Close Audit Trail
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
