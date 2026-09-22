@@ -1,6 +1,7 @@
 import { CaseModel } from '../models/caseModel.js';
 import { ProjectModel } from '../models/projectModel.js';
 import { PaymentModel } from '../models/paymentModel.js';
+import { SyncService } from '../services/SyncService.js';
 
 const isValidDate = (dateStr) => {
   if (!dateStr) return false;
@@ -331,4 +332,48 @@ export const CaseController = {
       next(err);
     }
   },
+
+  // POST /api/cases/:id/sync (On-demand user sync with rate-limiting)
+  async syncCaseProject(req, res, next) {
+    try {
+      const caseId = parseInt(req.params.id, 10);
+      if (isNaN(caseId)) {
+        return res.status(404).json({ success: false, error: 'Case not found' });
+      }
+
+      const buyerCase = await CaseModel.findById(caseId, req.user.id);
+      if (!buyerCase) {
+        return res.status(404).json({ success: false, error: 'Case not found' });
+      }
+
+      const result = await SyncService.requestManualSync(req.user.id, buyerCase.project_id);
+
+      if (result.rateLimited) {
+        return res.status(429).json({
+          success: false,
+          error: result.error,
+          remainingMinutes: result.remainingMinutes,
+        });
+      }
+
+      // Re-fetch updated case with latest reconciliation details
+      const updatedCase = await CaseModel.findById(caseId, req.user.id);
+      const payments = await PaymentModel.findByCaseId(caseId);
+
+      return res.status(200).json({
+        success: result.success,
+        message: result.success
+          ? 'Project synchronized with official state RERA portal.'
+          : 'Sync attempt failed. Saved case details were preserved.',
+        data: {
+          ...updatedCase,
+          payments,
+        },
+        syncResult: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
+

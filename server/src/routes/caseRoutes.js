@@ -13,6 +13,7 @@ router.get('/:id', CaseController.getCaseById);
 router.post('/', CaseController.createCase);
 router.patch('/:id', CaseController.updateCase);
 router.delete('/:id', CaseController.deleteCase);
+router.post('/:id/sync', CaseController.syncCaseProject);
 
 // Payments
 router.post('/:id/payments', CaseController.addPayment);

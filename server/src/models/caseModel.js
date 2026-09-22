@@ -15,6 +15,11 @@ export const CaseModel = {
               p.current_status AS project_status,
               p.oc_issued,
               p.last_synced_at,
+              p.data_source,
+              p.reconciliation_status,
+              p.previous_registered_possession_date,
+              p.complaint_count,
+              p.source_url,
               GREATEST(0, (CURRENT_DATE - COALESCE(bc.promised_date_from_agreement, p.registered_possession_date))::integer) AS days_delayed,
               COALESCE(
                 (SELECT SUM(amount) FROM case_payments WHERE buyer_case_id = bc.id),
@@ -49,6 +54,11 @@ export const CaseModel = {
               p.current_status AS project_status,
               p.oc_issued,
               p.last_synced_at,
+              p.data_source,
+              p.reconciliation_status,
+              p.previous_registered_possession_date,
+              p.complaint_count,
+              p.source_url,
               GREATEST(0, (CURRENT_DATE - COALESCE(bc.promised_date_from_agreement, p.registered_possession_date))::integer) AS days_delayed,
               COALESCE(
                 (SELECT SUM(amount) FROM case_payments WHERE buyer_case_id = bc.id),

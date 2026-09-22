@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Shield, LogOut, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { Shield, LogOut, LayoutDashboard, ChevronRight, Activity } from 'lucide-react';
 
 export const Navbar = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -67,6 +67,17 @@ export const Navbar = () => {
                   <LayoutDashboard className="w-4 h-4" />
                   <span className="hidden sm:inline">Case Workspace</span>
                 </Link>
+
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin/sync"
+                    className="inline-flex items-center gap-1.5 px-2 py-1 bg-card border border-border text-xs font-mono uppercase tracking-wider text-accent-primary hover:bg-page transition-colors"
+                    title="RERA Ingestion Telemetry & Manual Sync"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-accent-primary" />
+                    <span className="hidden md:inline">Sync Monitor</span>
+                  </Link>
+                )}
                 
                 <span className="text-border hidden sm:inline">|</span>
 

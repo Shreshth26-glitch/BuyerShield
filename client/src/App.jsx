@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CaseDetailPage } from './pages/CaseDetailPage';
+import { AdminSyncPage } from './pages/AdminSyncPage';
 import { SmoothScroll } from './components/SmoothScroll';
 import { PageTransition } from './components/PageTransition';
 
@@ -83,6 +84,14 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <CaseDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/sync"
+              element={
+                <ProtectedRoute>
+                  <AdminSyncPage />
                 </ProtectedRoute>
               }
             />

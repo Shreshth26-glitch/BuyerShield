@@ -14,6 +14,7 @@ import {
   FileText,
   Scale,
   ShieldCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { gsap, prefersReducedMotion } from '../utils/motion';
 
@@ -55,8 +56,57 @@ export const CaseDetailPage = () => {
   const [loggingPayment, setLoggingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
 
+  // On-demand portal sync state
+  const [syncing, setSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState(null); // { type: 'success' | 'warning' | 'error', message: string }
+
   const statsRowRef = useRef(null);
   const timelineRef = useRef(null);
+
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    setSyncFeedback(null);
+    try {
+      const res = await authFetch(`/api/cases/${id}/sync`, { method: 'POST' });
+      const json = await res.json();
+
+      if (res.status === 429) {
+        setSyncFeedback({
+          type: 'warning',
+          message: json.error || 'Rate limit active. Please try again later.',
+        });
+      } else if (res.ok) {
+        if (json.data) {
+          setCaseData(json.data);
+        }
+        if (json.syncResult?.success) {
+          setSyncFeedback({
+            type: 'success',
+            message: `Verified against official ${json.data?.state || ''} RERA portal disclosures.`,
+          });
+        } else {
+          setSyncFeedback({
+            type: 'warning',
+            message: "We couldn't verify this project against the official portal yet — your entered details are still saved.",
+          });
+        }
+      } else {
+        setSyncFeedback({
+          type: 'warning',
+          message: json.error || "We couldn't verify this project against the official portal yet — your entered details are still saved.",
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncFeedback({
+        type: 'warning',
+        message: "We couldn't connect to the verification service. Your entered details are safe.",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
 
   const fetchCase = async () => {
     try {
@@ -222,9 +272,14 @@ export const CaseDetailPage = () => {
                 <EyebrowLabel variant="primary" text="SECTION 18 CASE DOSSIER" />
                 <Badge variant="primary">{caseData.state}</Badge>
                 {isVerified ? (
-                  <Badge variant="neutral">Verified from {caseData.state} RERA</Badge>
+                  <span className="font-mono text-xs text-accent-primary flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Verified {formatDate(caseData.last_synced_at)} via {caseData.state} RERA</span>
+                  </span>
                 ) : (
-                  <Badge variant="warning">Self-Reported / Unverified</Badge>
+                  <span className="font-mono text-xs text-text-secondary italic">
+                    Unverified — self-reported data
+                  </span>
                 )}
                 <span className="font-mono text-xs bg-page px-2.5 py-0.5 border border-border text-text-primary font-bold">
                   {caseData.rera_number}
@@ -242,8 +297,18 @@ export const CaseDetailPage = () => {
               </div>
             </div>
 
-            {/* Status Indicator Badge */}
-            <div className="flex items-center gap-3">
+            {/* Action & Status Indicator Area */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <button
+                onClick={handleSyncNow}
+                disabled={syncing}
+                title="Synchronize official completion dates and progress disclosures directly from state RERA portal"
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-card hover:bg-page border border-border text-xs font-mono uppercase tracking-wider text-text-primary transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-accent-primary ${syncing ? 'animate-spin' : ''}`} />
+                <span>{syncing ? 'Checking Portal...' : 'Sync with Portal'}</span>
+              </button>
+
               {isDelayed ? (
                 <div className="px-4 py-2 bg-accent-warning-bg border border-accent-warning/50 text-accent-warning flex items-center gap-2 font-mono text-xs uppercase tracking-wider font-bold">
                   <Clock className="w-4 h-4" />
@@ -257,6 +322,7 @@ export const CaseDetailPage = () => {
               )}
             </div>
           </div>
+
 
           {/* Three-Stat Row using <StatBlock> (Mono values) */}
           <div
@@ -286,8 +352,70 @@ export const CaseDetailPage = () => {
       </div>
 
       {/* Main Dossier Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-10">
         
+        {/* Sync Feedback Toast / Banner */}
+        {syncFeedback && (
+          <div
+            className={`p-4 border font-mono text-xs flex items-center justify-between gap-3 ${
+              syncFeedback.type === 'success'
+                ? 'bg-accent-primary-bg border-accent-primary/40 text-accent-primary'
+                : 'bg-accent-warning-bg border-accent-warning/40 text-accent-warning'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {syncFeedback.type === 'success' ? (
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+              )}
+              <span>{syncFeedback.message}</span>
+            </div>
+            <button
+              onClick={() => setSyncFeedback(null)}
+              className="text-text-secondary hover:text-text-primary text-[11px] uppercase tracking-wider font-semibold"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Reconciliation Mismatch Notice (Section 18 Governing Rule) */}
+        {caseData.reconciliation_status === 'mismatched' && (
+          <div className="bg-[#FFFDF7] border-l-4 border-l-accent-warning border border-border p-5 sm:p-6 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-accent-warning shrink-0" />
+                <h3 className="font-serif text-base font-bold text-text-primary">
+                  Statutory Date Discrepancy Detected
+                </h3>
+              </div>
+              <Badge variant="warning">Mismatched With Portal</Badge>
+            </div>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              The developer reported a different completion date to {caseData.state} RERA than what is stipulated in your registered agreement. Under Section 18 of the Real Estate (Regulation and Development) Act, <strong>the date in your registered agreement governs your right to delay interest or refund</strong>. Unilateral portal extensions by the promoter do not extinguish your statutory remedy.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/60 font-mono text-xs">
+              <div className="p-3 bg-page border border-border">
+                <div className="text-text-secondary uppercase tracking-eyebrow text-[10px] mb-1">
+                  Your Agreement Date (Governing Statutory Baseline)
+                </div>
+                <div className="text-sm font-bold text-text-primary">
+                  {formatDate(caseData.promised_date_from_agreement)}
+                </div>
+              </div>
+              <div className="p-3 bg-page border border-border">
+                <div className="text-text-secondary uppercase tracking-eyebrow text-[10px] mb-1">
+                  Portal Registered Date (Promoter Disclosed to {caseData.state} RERA)
+                </div>
+                <div className="text-sm font-bold text-accent-warning">
+                  {formatDate(caseData.registered_possession_date)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* =================================================================== */}
         {/* 1. STRUCTURAL TIMELINE & PROGRESS MILESTONES                        */}
         {/* =================================================================== */}

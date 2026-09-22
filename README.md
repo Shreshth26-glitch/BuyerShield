@@ -52,6 +52,30 @@ When developers delay project possession, Section 18 grants allottees the uncond
   - `DashboardPage.jsx`: Dynamic directory listing active property cases with staggered scroll reveal, retaining the Phase 1 empty state when 0 cases exist.
 - **Automated Verification**: Comprehensive test suite (`server/test/phase2_test.js`) verifying all validation rules, derived metrics, and security isolation.
 
+### Phase 3 — RERA Portal Ingestion Pipeline & Reconciliation
+- **Per-State Adapter Architecture**:
+  - Extensible `StateAdapter` base class with code-level polite throttling (`throttle()`), browser mimicry headers, and custom exception hierarchy (`TransientSyncError`, `StructuralSyncError`, `ProjectNotFoundError`).
+  - Concrete `MahaRERAAdapter` (Maharashtra) and `KarnatakaRERAAdapter` (Karnataka) parsing public portal disclosures.
+- **Orchestration & Resilient Retry Engine (`SyncService`)**:
+  - Exponential backoff retry policy: up to 2 retries with progressive delay for transient portal timeouts/5xx errors; immediate failure without retrying on structural DOM shifts or 404s.
+  - Scheduled daily background synchronization (`SyncService.initScheduler()`) automatically checking active cases.
+  - Comprehensive job audit trails logged to `sync_jobs` table (`project_id`, `state`, `status`, `retry_count`, `error_log`, `completed_at`).
+- **Section 18 Contractual Reconciliation Engine**:
+  - **Preserves Buyer Baseline**: Under no circumstance is the buyer's contractual `promised_date_from_agreement` overwritten by developer filings on the portal.
+  - **Mismatch Detection**: Detects unilateral portal deadline extensions and flags `reconciliation_status = 'mismatched'`.
+  - Captures `previous_registered_possession_date` and official `complaint_count` from portal disclosures.
+- **On-Demand Buyer Portal Synchronization**:
+  - On-demand `POST /api/cases/:id/sync` endpoint with per-user 1-hour cooldown protection (returns HTTP 429 with remaining cooldown).
+  - Graceful degradation: Sync outages never corrupt saved buyer data or block access to case dossiers.
+- **Admin Ingestion Telemetry & Monitoring Console (`/admin/sync`)**:
+  - 7-day and 30-day aggregate success rates per state portal.
+  - Filterable audit table with job statuses (`success`, `failed`, `running`), execution timestamps, and expandable diagnostic error trace logs.
+  - Single-click manual retry endpoint (`POST /api/admin/sync/retry/:jobId`) with admin RBAC protection.
+- **Frontend Dossier Enhancements**:
+  - "Verified [date] via [State] RERA" vs. "Unverified — self-reported data" badge.
+  - Prominent Section 18 statutory discrepancy warning box explaining that the agreement date legally supersedes unilateral portal extensions.
+  - Dynamic on-demand sync button with inline status alerts.
+
 ---
 
 ## Technology Stack
@@ -180,10 +204,14 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ## Running Automated Tests
 
-Run the automated backend acceptance test suite (covers project search, duplicate prevention, case creation, derived fields, payment history, and cross-account 404 security):
+Run the automated backend acceptance test suites:
 
 ```bash
+# Phase 2: CRUD, validation rules, derived metrics, and user isolation
 node server/test/phase2_test.js
+
+# Phase 3: Adapters, reconciliation engine, retry policies, rate limiting, and admin telemetry
+node server/test/phase3_test.js
 ```
 
 Verify frontend linting and production build:
@@ -199,7 +227,7 @@ npm --prefix client run build
 - [x] **Phase 1: Foundation & Design System** (DB schema, auth, editorial civic aesthetic, landing page)
 - [x] **Phase 1B: Motion & Premium Feel Layer** (GSAP hero timeline, ScrollTrigger reveals, Lenis smooth scroll, Three.js hero wireframe)
 - [x] **Phase 2: Core Data & Manual Case Management** (Project search & duplicate prevention, case dossiers, payment ledger, derived days delayed)
-- [ ] **Phase 3: Real-Time State RERA Scraping & Sync** (Automated sync with MahaRERA & Karnataka RERA portals for QPR filings and OC tracking)
+- [x] **Phase 3: RERA Portal Ingestion Pipeline & Reconciliation** (MahaRERA & K-RERA adapters, resilient sync retry, reconciliation mismatch detection, admin telemetry)
 - [ ] **Phase 4: Statutory Remedy & Interest Ledger Calculator** (Rule-mandated SBI Highest MCLR + 200 bps compounding computation)
 - [ ] **Phase 5: RAG Legal Precedents & Citation Engine** (Vector semantic search over Supreme Court and state RERA tribunal orders)
 - [ ] **Phase 6: Section 31 Formal Complaint Generator** (Pre-formatted Form M / Form N legal draft export for tribunal filing)
