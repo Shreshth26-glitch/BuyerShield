@@ -1,0 +1,207 @@
+[
+  {
+    "id": "TC-01",
+    "description": "Maharashtra 2-year delay, high disbursement (92%), seeking withdrawal & refund",
+    "facts": {
+      "state": "Maharashtra",
+      "delayMonths": 24,
+      "amountPaidPercentage": 92.5,
+      "remedyType": "withdraw"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "CC00600000018492",
+      "CC00600000030114"
+    ]
+  },
+  {
+    "id": "TC-02",
+    "description": "Maharashtra 18-month delay, retaining unit, seeking monthly delay interest",
+    "facts": {
+      "state": "Maharashtra",
+      "delayMonths": 18,
+      "amountPaidPercentage": 88.0,
+      "remedyType": "continue"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "CC00600000021430",
+      "CC00600000034501"
+    ]
+  },
+  {
+    "id": "TC-03",
+    "description": "Karnataka 3-year delay, full payment (95%), seeking full statutory refund",
+    "facts": {
+      "state": "Karnataka",
+      "delayMonths": 36,
+      "amountPaidPercentage": 95.0,
+      "remedyType": "withdraw"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "COMP_2022_0841",
+      "COMP_2022_1904"
+    ]
+  },
+  {
+    "id": "TC-04",
+    "description": "Karnataka 14-month delay, retaining flat, claiming recurring monthly interest",
+    "facts": {
+      "state": "Karnataka",
+      "delayMonths": 14,
+      "amountPaidPercentage": 85.0,
+      "remedyType": "continue"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "COMP_2023_0192"
+    ]
+  },
+  {
+    "id": "TC-05",
+    "description": "Maharashtra 1-year delay (12 months), 80% paid, seeking refund under Section 18(1)",
+    "facts": {
+      "state": "Maharashtra",
+      "delayMonths": 12,
+      "amountPaidPercentage": 80.0,
+      "remedyType": "withdraw"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "CC00600000030114",
+      "CC00600000018492"
+    ]
+  },
+  {
+    "id": "TC-06",
+    "description": "Maharashtra high delay (30 months), 90% paid, claiming continuous delay interest",
+    "facts": {
+      "state": "Maharashtra",
+      "delayMonths": 30,
+      "amountPaidPercentage": 90.0,
+      "remedyType": "continue"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "CC00600000034501",
+      "CC00600000019208"
+    ]
+  },
+  {
+    "id": "TC-07",
+    "description": "Karnataka extreme delay (48 months), 100% paid, claiming cancellation & refund",
+    "facts": {
+      "state": "Karnataka",
+      "delayMonths": 48,
+      "amountPaidPercentage": 100.0,
+      "remedyType": "withdraw"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "COMP_2022_1904",
+      "COMP_2022_0841"
+    ]
+  },
+  {
+    "id": "TC-08",
+    "description": "Maharashtra early delay (8 months), 75% paid, demanding monthly interest under Rule 18",
+    "facts": {
+      "state": "Maharashtra",
+      "delayMonths": 8,
+      "amountPaidPercentage": 75.0,
+      "remedyType": "continue"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "CC00600000028911",
+      "CC00600000021430"
+    ]
+  },
+  {
+    "id": "TC-09",
+    "description": "Karnataka moderate delay (15 months), 70% paid, claiming refund without forfeiture",
+    "facts": {
+      "state": "Karnataka",
+      "delayMonths": 15,
+      "amountPaidPercentage": 70.0,
+      "remedyType": "withdraw"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "COMP_2023_0982",
+      "COMP_2022_0841"
+    ]
+  },
+  {
+    "id": "TC-10",
+    "description": "Maharashtra long delay (40 months), 95% paid, demanding delay interest till valid OC",
+    "facts": {
+      "state": "Maharashtra",
+      "delayMonths": 40,
+      "amountPaidPercentage": 95.0,
+      "remedyType": "continue"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "CC00600000019208",
+      "CC00600000034501"
+    ]
+  },
+  {
+    "id": "TC-11",
+    "description": "Maharashtra 22-month delay, 90% disbursed, seeking refund under Section 18",
+    "facts": {
+      "state": "Maharashtra",
+      "delayMonths": 22,
+      "amountPaidPercentage": 90.0,
+      "remedyType": "withdraw"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "CC00600000018492",
+      "CC00600000030114"
+    ]
+  },
+  {
+    "id": "TC-12",
+    "description": "Maharashtra 16-month delay, retaining unit, claiming monthly interest",
+    "facts": {
+      "state": "Maharashtra",
+      "delayMonths": 16,
+      "amountPaidPercentage": 85.0,
+      "remedyType": "continue"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "CC00600000021430",
+      "CC00600000028911"
+    ]
+  },
+  {
+    "id": "TC-13",
+    "description": "Karnataka 34-month delay, 92% paid, demanding refund and statutory interest",
+    "facts": {
+      "state": "Karnataka",
+      "delayMonths": 34,
+      "amountPaidPercentage": 92.0,
+      "remedyType": "withdraw"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "COMP_2022_0841",
+      "COMP_2022_1904"
+    ]
+  },
+  {
+    "id": "TC-14",
+    "description": "Karnataka 12-month delay, 80% paid, seeking delay interest under K-RERA Rule 16",
+    "facts": {
+      "state": "Karnataka",
+      "delayMonths": 12,
+      "amountPaidPercentage": 80.0,
+      "remedyType": "continue"
+    },
+    "expectedPrecedentSummaryMatches": [
+      "COMP_2023_0192"
+    ]
+  },
+  {
+    "id": "TC-15",
+    "description": "Deliberately unusual edge case: 120-month delay in uncharted state (low confidence test)",
+    "facts": {
+      "state": "Goa",
+      "delayMonths": 120,
+      "amountPaidPercentage": 10.0,
+      "remedyType": "withdraw"
+    },
+    "expectedPrecedentSummaryMatches": []
+  }
+]

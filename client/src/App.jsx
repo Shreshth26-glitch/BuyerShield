@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { CaseDetailPage } from './pages/CaseDetailPage';
 import { AdminSyncPage } from './pages/AdminSyncPage';
 import { AdminInterestRatesPage } from './pages/AdminInterestRatesPage';
+import { AdminPrecedentsPage } from './pages/AdminPrecedentsPage';
 import { SmoothScroll } from './components/SmoothScroll';
 import { PageTransition } from './components/PageTransition';
 
@@ -101,6 +102,14 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <AdminInterestRatesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/precedents"
+              element={
+                <ProtectedRoute>
+                  <AdminPrecedentsPage />
                 </ProtectedRoute>
               }
             />

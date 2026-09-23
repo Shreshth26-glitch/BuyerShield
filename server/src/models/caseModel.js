@@ -41,11 +41,10 @@ export const CaseModel = {
   },
 
   /**
-   * Find single case by ID for a specific user, with joined project and computed fields
+   * Find single case by ID with joined project and computed fields, optionally filtering by user
    */
-  async findById(id, userId) {
-    const res = await query(
-      `SELECT bc.*, 
+  async findById(id, userId = null) {
+    let sql = `SELECT bc.*, 
               p.name AS project_name, 
               p.rera_number, 
               p.developer_name, 
@@ -67,9 +66,13 @@ export const CaseModel = {
               )::numeric AS total_paid
        FROM buyer_cases bc
        JOIN projects p ON bc.project_id = p.id
-       WHERE bc.id = $1 AND bc.user_id = $2`,
-      [id, userId]
-    );
+       WHERE bc.id = $1`;
+    const params = [id];
+    if (userId) {
+      sql += ` AND bc.user_id = $2`;
+      params.push(userId);
+    }
+    const res = await query(sql, params);
 
     if (!res.rows[0]) return null;
 
@@ -79,6 +82,10 @@ export const CaseModel = {
       days_delayed: parseInt(row.days_delayed, 10) || 0,
       total_paid: parseFloat(row.total_paid) || 0,
     };
+  },
+
+  async getCaseById(id) {
+    return this.findById(id);
   },
 
   /**

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { CaseController } from '../controllers/caseController.js';
 import { RemedyController } from '../controllers/remedyController.js';
+import { ExplanationController } from '../controllers/explanationController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -19,6 +20,10 @@ router.post('/:id/sync', CaseController.syncCaseProject);
 // Section 18 Remedy Calculations
 router.post('/:id/calculate-remedy', RemedyController.calculateRemedy);
 router.get('/:id/remedy-history', RemedyController.getRemedyHistory);
+
+// Phase 5: RAG-Grounded Legal Explanation & Precedent Grounding
+router.post('/:id/explain-remedy', ExplanationController.explainRemedy);
+router.get('/:id/explanations', ExplanationController.getExplanationHistory);
 
 // Payments
 router.post('/:id/payments', CaseController.addPayment);

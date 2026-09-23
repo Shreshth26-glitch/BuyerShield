@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Shield, LogOut, LayoutDashboard, ChevronRight, Activity, Scale } from 'lucide-react';
+import { Shield, LogOut, LayoutDashboard, ChevronRight, Activity, Scale, BookOpen } from 'lucide-react';
 
 export const Navbar = () => {
   const { isAuthenticated, logout, user } = useAuth();
@@ -86,6 +86,15 @@ export const Navbar = () => {
                     >
                       <Scale className="w-3.5 h-3.5 text-accent-primary" />
                       <span className="hidden md:inline">Rates</span>
+                    </Link>
+
+                    <Link
+                      to="/admin/precedents"
+                      className="inline-flex items-center gap-1.5 px-2 py-1 bg-card border border-border text-xs font-mono uppercase tracking-wider text-accent-primary hover:bg-page transition-colors"
+                      title="Tribunal Precedents & RAG Ingestion"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-accent-primary" />
+                      <span className="hidden md:inline">Precedents</span>
                     </Link>
                   </>
                 )}

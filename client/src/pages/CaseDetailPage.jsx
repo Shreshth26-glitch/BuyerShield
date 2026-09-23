@@ -17,6 +17,11 @@ import {
   RefreshCw,
   History,
   Info,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  BookOpen,
 } from 'lucide-react';
 import { RemedyDisclaimer } from '../components/RemedyDisclaimer';
 import { gsap, prefersReducedMotion } from '../utils/motion';
@@ -70,6 +75,54 @@ export const CaseDetailPage = () => {
   const [remedyHistory, setRemedyHistory] = useState([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // Phase 5: RAG-Grounded Legal Explanation & Precedent State
+  const [explanationData, setExplanationData] = useState(null);
+  const [explainingRemedy, setExplainingRemedy] = useState(false);
+  const [explanationError, setExplanationError] = useState(null);
+  const [selectedRemedyForExplanation, setSelectedRemedyForExplanation] = useState('withdraw');
+  const [explanationHistory, setExplanationHistory] = useState([]);
+  const [showExplanationHistoryModal, setShowExplanationHistoryModal] = useState(false);
+  const [expandedPrecedentId, setExpandedPrecedentId] = useState(null);
+
+  const fetchExplanationHistory = async () => {
+    try {
+      const res = await authFetch(`/api/cases/${id}/explanations`);
+      if (res.ok) {
+        const json = await res.json();
+        setExplanationHistory(json.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch explanation history:', err);
+    }
+  };
+
+  const handleExplainRemedy = async (remedyType = 'withdraw') => {
+    setSelectedRemedyForExplanation(remedyType);
+    setExplainingRemedy(true);
+    setExplanationError(null);
+    try {
+      const res = await authFetch(`/api/cases/${id}/explain-remedy`, {
+        method: 'POST',
+        body: JSON.stringify({
+          remedyCalculationId: remedyData?.[remedyType]?.calculationId || null,
+          remedyType,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setExplanationData(json.data);
+        fetchExplanationHistory();
+      } else {
+        setExplanationError(json.error || 'Failed to generate legal grounds explanation.');
+      }
+    } catch (err) {
+      console.error('Explanation request error:', err);
+      setExplanationError('Network error connecting to legal intelligence layer.');
+    } finally {
+      setExplainingRemedy(false);
+    }
+  };
 
   const fetchRemedyHistory = async () => {
     try {
@@ -173,6 +226,7 @@ export const CaseDetailPage = () => {
           handleCalculateRemedy();
         }
         fetchRemedyHistory();
+        fetchExplanationHistory();
       } else {
         setError(json.error || 'Failed to retrieve case details.');
       }
@@ -835,6 +889,18 @@ export const CaseDetailPage = () => {
                       <strong className="text-accent-primary">{remedyData?.policy?.totalRate || '11.10'}% p.a.</strong>
                     </div>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      handleExplainRemedy('withdraw');
+                      document.getElementById('legal-precedents-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    disabled={explainingRemedy}
+                    className="w-full inline-flex items-center justify-center gap-2 py-2 px-3 bg-card hover:bg-page border border-accent-primary text-accent-primary text-xs font-mono uppercase tracking-wider font-semibold transition-colors"
+                  >
+                    <Scale className="w-3.5 h-3.5" />
+                    <span>{explainingRemedy && selectedRemedyForExplanation === 'withdraw' ? 'Grounding Law...' : 'Explain Statutory Grounds (Option 01)'}</span>
+                  </button>
                 </div>
 
                 {/* OPTION 02: CONTINUE & CLAIM MONTHLY DELAY INTEREST */}
@@ -882,6 +948,18 @@ export const CaseDetailPage = () => {
                       <strong className="text-text-primary">Payable monthly (not lump sum)</strong>
                     </div>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      handleExplainRemedy('continue');
+                      document.getElementById('legal-precedents-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    disabled={explainingRemedy}
+                    className="w-full inline-flex items-center justify-center gap-2 py-2 px-3 bg-card hover:bg-page border border-accent-warning text-accent-warning text-xs font-mono uppercase tracking-wider font-semibold transition-colors"
+                  >
+                    <Scale className="w-3.5 h-3.5" />
+                    <span>{explainingRemedy && selectedRemedyForExplanation === 'continue' ? 'Grounding Law...' : 'Explain Statutory Grounds (Option 02)'}</span>
+                  </button>
                 </div>
 
               </div>
@@ -954,52 +1032,362 @@ export const CaseDetailPage = () => {
         </div>
 
         {/* =================================================================== */}
-        {/* 4. FUTURE SCOPE PLACEHOLDERS (Phase 5 & 6 Coming Soon)             */}
+        {/* 4. PHASE 5: LEGAL BASIS & TRIBUNAL PRECEDENTS LAYER                */}
         {/* =================================================================== */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div id="legal-precedents-section" className="space-y-6 pt-4 border-t border-border">
           
-          {/* Phase 5: Legal Basis & Precedents Placeholder */}
-          <div className="border border-border/70 bg-card/60 p-6 opacity-75 relative">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-mono text-[10px] uppercase tracking-eyebrow text-text-secondary">
-                PHASE 5 PREVIEW • COMING SOON
-              </span>
-              <Badge variant="neutral">RAG Search</Badge>
-            </div>
-            <div className="flex items-start gap-3">
-              <Scale className="w-5 h-5 text-text-secondary shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-serif text-lg font-bold text-text-primary mb-1">
-                  Legal Basis & Tribunal Precedents
-                </h3>
-                <p className="text-xs text-text-secondary leading-relaxed">
-                  In upcoming Phase 5, this section will automatically surface verified MahaRERA and K-RERA judicial precedents involving {caseData.developer_name} or comparable delay durations.
-                </p>
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <EyebrowLabel variant="primary" text="STATUTORY BASIS & TRIBUNAL PRECEDENTS" />
+                {explanationData ? (
+                  <Badge variant={explanationData.confidenceFlag === 'grounded' ? 'primary' : 'warning'}>
+                    {explanationData.confidenceFlag === 'grounded' ? 'GROUNDED CITATIONS' : 'LIMITED PRECEDENT'}
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral">EVIDENTIARY RAG</Badge>
+                )}
               </div>
+              <h2 className="font-serif text-2xl font-bold text-text-primary">
+                Legal Basis & Regulatory Precedents
+              </h2>
+              <p className="text-xs text-text-secondary mt-0.5 font-sans">
+                Grounding your Section 18 calculations in the RERA Act 2016, state statutory rules, and real tribunal orders reranked by structured delay facts.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2.5 self-start sm:self-center">
+              {explanationHistory.length > 0 && (
+                <button
+                  onClick={() => setShowExplanationHistoryModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-card hover:bg-page border border-border text-xs font-mono uppercase tracking-wider text-text-secondary hover:text-text-primary transition-colors"
+                  title="View past legal explanation runs"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Citations History ({explanationHistory.length})</span>
+                </button>
+              )}
+
+              <div className="inline-flex border border-border bg-page p-0.5">
+                <button
+                  onClick={() => handleExplainRemedy('withdraw')}
+                  disabled={explainingRemedy}
+                  className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${
+                    selectedRemedyForExplanation === 'withdraw'
+                      ? 'bg-card font-bold text-accent-primary border-b-2 border-accent-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Option 01: Withdraw
+                </button>
+                <button
+                  onClick={() => handleExplainRemedy('continue')}
+                  disabled={explainingRemedy}
+                  className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition-colors ${
+                    selectedRemedyForExplanation === 'continue'
+                      ? 'bg-card font-bold text-accent-warning border-b-2 border-accent-warning'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Option 02: Continue
+                </button>
+              </div>
+
+              <button
+                onClick={() => handleExplainRemedy(selectedRemedyForExplanation)}
+                disabled={explainingRemedy}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-[#162D20] text-[#F7F2E9] text-xs font-mono uppercase tracking-wider border border-accent-primary disabled:opacity-50 transition-colors"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${explainingRemedy ? 'animate-spin' : ''}`} />
+                <span>{explainingRemedy ? 'Analyzing Law...' : 'Analyze Grounds'}</span>
+              </button>
             </div>
           </div>
 
-          {/* Phase 6: Form M Complaint Draft Placeholder */}
-          <div className="border border-border/70 bg-card/60 p-6 opacity-75 relative">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-mono text-[10px] uppercase tracking-eyebrow text-text-secondary">
-                PHASE 6 PREVIEW • COMING SOON
-              </span>
-              <Badge variant="neutral">Draft Skeleton</Badge>
+          {/* Explanation Error Banner if any */}
+          {explanationError && (
+            <div className="p-4 bg-accent-warning-bg border border-accent-warning/40 text-accent-warning text-xs font-mono flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{explanationError}</span>
             </div>
-            <div className="flex items-start gap-3">
-              <FileText className="w-5 h-5 text-text-secondary shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-serif text-lg font-bold text-text-primary mb-1">
-                  Statutory Complaint Dossier (Form M)
+          )}
+
+          {!explanationData && !explainingRemedy && (
+            /* Pre-Analysis Educational Card */
+            <div className="bg-card border border-border p-8 text-center space-y-4">
+              <Scale className="w-10 h-10 text-accent-primary mx-auto" />
+              <div className="space-y-1">
+                <h3 className="font-serif text-lg font-bold text-text-primary">
+                  Evidentiary Legal Grounding Not Yet Generated
                 </h3>
-                <p className="text-xs text-text-secondary leading-relaxed">
-                  In Phase 6, compile your audited timeline and payment receipts into an exportable Section 31 complaint ready for submission before the Adjudicating Officer.
+                <p className="text-xs text-text-secondary max-w-xl mx-auto font-sans leading-relaxed">
+                  Trigger an automated legal analysis to cross-reference your delay duration ({caseData.days_delayed || 0} days) and payment ledger ({formatINR(caseData.total_paid)}) against verified statutory Act provisions and comparable {caseData.state} RERA tribunal precedents.
                 </p>
               </div>
+              <button
+                onClick={() => handleExplainRemedy('withdraw')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-accent-primary text-[#F7F2E9] text-xs font-mono uppercase tracking-wider hover:bg-[#162D20] transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Run Section 18 Legal Analysis</span>
+              </button>
+            </div>
+          )}
+
+          {explainingRemedy && (
+            <div className="bg-card border border-border p-12 text-center space-y-3">
+              <RefreshCw className="w-8 h-8 text-accent-primary animate-spin mx-auto" />
+              <h3 className="font-serif text-lg font-bold text-text-primary">
+                Grounding Statutory Law & Reranking Precedents...
+              </h3>
+              <p className="text-xs text-text-secondary font-mono">
+                Matching delay months and disbursement percentage against regulatory tribunal filings.
+              </p>
+            </div>
+          )}
+
+          {explanationData && !explainingRemedy && (
+            <div className="space-y-6">
+              
+              {/* Honest Low Confidence Warning Notice */}
+              {explanationData.confidenceFlag === 'low_confidence' && (
+                <div className="p-4 bg-accent-warning-bg border-l-4 border-accent-warning border text-xs font-mono flex items-start gap-3">
+                  <AlertTriangle className="w-4 h-4 text-accent-warning shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <strong className="text-accent-warning uppercase font-bold tracking-wider">
+                      Limited Closely Comparable Precedent Found
+                    </strong>
+                    <p className="text-text-secondary leading-relaxed font-sans">
+                      Our regulatory database returned fewer than 2 closely matching past tribunal orders for this specific delay timeline and state profile. While your entitlement remains strictly governed by the Act provisions cited below, past tribunal outcomes depend on individual contractual milestones.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 1. Cited Act Provisions */}
+              {explanationData.citedProvisions && explanationData.citedProvisions.length > 0 && (
+                <div className="bg-card border border-border p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-accent-primary" />
+                      <h4 className="font-serif text-base font-bold text-text-primary">
+                        Cited Statutory Provisions ({explanationData.citedProvisions.length})
+                      </h4>
+                    </div>
+                    <span className="font-mono text-xs text-text-secondary">
+                      RERA Act 2016 & State Rules
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {explanationData.citedProvisions.map((prov) => (
+                      <div key={prov.id} className="bg-page border border-border p-4 space-y-2 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="font-mono text-xs font-bold text-accent-primary bg-card px-2 py-0.5 border border-border">
+                              {prov.sectionNumber}
+                            </span>
+                            {prov.state && (
+                              <Badge variant="neutral">{prov.state}</Badge>
+                            )}
+                          </div>
+                          <h5 className="font-serif text-sm font-bold text-text-primary mb-1">
+                            {prov.title}
+                          </h5>
+                          <p className="text-xs text-text-secondary font-serif italic leading-relaxed line-clamp-4">
+                            "{prov.fullText}"
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Synthesized Grounded Legal Explanation */}
+              <div className="bg-card border border-border p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <div className="flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-accent-primary" />
+                    <h4 className="font-serif text-base font-bold text-text-primary">
+                      Evidentiary Statutory Analysis
+                    </h4>
+                  </div>
+                  <span className="font-mono text-xs text-text-secondary uppercase">
+                    Strict Source Grounding
+                  </span>
+                </div>
+
+                <div className="prose text-xs text-text-primary font-sans leading-relaxed space-y-3 whitespace-pre-line">
+                  {explanationData.explanationText}
+                </div>
+              </div>
+
+              {/* 3. Reranked Precedent Orders Cards */}
+              {explanationData.citedPrecedents && explanationData.citedPrecedents.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="font-mono text-[11px] uppercase tracking-eyebrow text-text-secondary font-semibold">
+                        STRUCTURED FACT RERANKING
+                      </div>
+                      <h4 className="font-serif text-lg font-bold text-text-primary">
+                        Comparable Regulatory Tribunal Orders ({explanationData.citedPrecedents.length})
+                      </h4>
+                    </div>
+                    <span className="font-mono text-xs text-text-secondary">
+                      Reranked by Closeness to {caseData.days_delayed || 0}d Delay & Disbursement Ratio
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {explanationData.citedPrecedents.map((prec) => {
+                      const isExpanded = expandedPrecedentId === prec.id;
+                      return (
+                        <div
+                          key={prec.id}
+                          className="bg-card border border-border p-5 space-y-4 flex flex-col justify-between hover:border-accent-primary/50 transition-colors"
+                        >
+                          <div className="space-y-3">
+                            {/* Card Header */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-bold text-text-primary">
+                                  ORDER #{prec.id}
+                                </span>
+                                <Badge variant="neutral">{prec.state} RERA</Badge>
+                              </div>
+                              <Badge variant={prec.remedyType === 'withdraw' ? 'primary' : 'warning'}>
+                                {prec.outcomeType || prec.remedyType}
+                              </Badge>
+                            </div>
+
+                            {/* Stat Blocks */}
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <StatBlock
+                                label="Tribunal Delay"
+                                value={`${prec.delayMonths || 0}m`}
+                                sublabel="Months Elapsed"
+                                variant="neutral"
+                              />
+                              <StatBlock
+                                label="Disbursed Ratio"
+                                value={`${prec.amountPaidPercentage || 0}%`}
+                                sublabel="Paid by Allottee"
+                                variant="neutral"
+                              />
+                            </div>
+
+                            {/* Awarded Info */}
+                            <div className="bg-page border border-border p-2.5 text-xs font-mono space-y-1">
+                              {prec.awardedAmount && (
+                                <div className="flex justify-between">
+                                  <span className="text-text-secondary">Awarded Payout:</span>
+                                  <strong className="text-text-primary">{formatINR(prec.awardedAmount)}</strong>
+                                </div>
+                              )}
+                              {prec.interestRate && (
+                                <div className="flex justify-between">
+                                  <span className="text-text-secondary">Adjudicated Rate:</span>
+                                  <strong className="text-accent-primary">{prec.interestRate}% p.a.</strong>
+                                </div>
+                              )}
+                              <div className="flex justify-between">
+                                <span className="text-text-secondary">Adjudication Date:</span>
+                                <strong className="text-text-primary">{formatDate(prec.orderDate)}</strong>
+                              </div>
+                            </div>
+
+                            {/* Relevance Note */}
+                            {prec.relevanceNote && (
+                              <p className="text-[11px] text-text-secondary font-sans italic bg-page/60 p-2 border-l-2 border-accent-primary">
+                                <strong>Why relevant:</strong> {prec.relevanceNote}
+                              </p>
+                            )}
+
+                            {/* Summary Expandable */}
+                            {isExpanded && (
+                              <p className="text-xs text-text-secondary font-sans leading-relaxed pt-2 border-t border-border">
+                                {prec.summary}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Footer Actions */}
+                          <div className="flex items-center justify-between border-t border-border pt-3 text-xs font-mono">
+                            <button
+                              onClick={() => setExpandedPrecedentId(isExpanded ? null : prec.id)}
+                              className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                  <span>Hide Summary</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                  <span>View Holding</span>
+                                </>
+                              )}
+                            </button>
+
+                            {prec.sourceUrl && (
+                              <a
+                                href={prec.sourceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-accent-primary hover:underline"
+                              >
+                                <span>Official Order</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Zero-Guarantee Permanent Advisory */}
+              <div className="bg-page border border-border px-4 py-3 text-xs font-mono text-text-secondary flex items-center gap-2">
+                <Info className="w-4 h-4 text-accent-primary shrink-0" />
+                <span>
+                  <strong>Evidentiary Notice:</strong> Past tribunal orders illustrate what similar cases received and do not constitute a legal guarantee of outcome for your case. Entitlement computations on this dossier reflect statutory calculations under the Act and must be presented formally before the Adjudicating Officer.
+                </span>
+              </div>
+
+            </div>
+          )}
+
+        </div>
+
+        {/* =================================================================== */}
+        {/* 5. FUTURE SCOPE PLACEHOLDER (Phase 6 Coming Soon)                   */}
+        {/* =================================================================== */}
+        <div className="border border-border/70 bg-card/60 p-6 opacity-75 relative">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-mono text-[10px] uppercase tracking-eyebrow text-text-secondary">
+              PHASE 6 PREVIEW • COMING SOON
+            </span>
+            <Badge variant="neutral">Draft Skeleton</Badge>
+          </div>
+          <div className="flex items-start gap-3">
+            <FileText className="w-5 h-5 text-text-secondary shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-serif text-lg font-bold text-text-primary mb-1">
+                Statutory Complaint Dossier (Form M)
+              </h3>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                In Phase 6, compile your audited timeline, Section 18 calculations, and grounded tribunal citations into an exportable formal Section 31 complaint ready for submission before the Adjudicating Officer.
+              </p>
             </div>
           </div>
-
         </div>
 
       </div>
@@ -1086,6 +1474,90 @@ export const CaseDetailPage = () => {
                 className="px-4 py-2 border border-border text-xs font-mono uppercase tracking-wider text-text-secondary hover:bg-page transition-colors"
               >
                 Close Audit Trail
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Explanation History Modal */}
+      {showExplanationHistoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-card border border-border max-w-2xl w-full p-6 space-y-4 animate-fade-in max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-eyebrow text-text-secondary font-semibold">
+                  AUDIT LOG • STATUTORY CITATIONS
+                </div>
+                <h3 className="font-serif text-xl font-bold text-text-primary">
+                  Legal Explanation History
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowExplanationHistoryModal(false)}
+                className="text-text-secondary hover:text-text-primary font-mono text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-text-secondary font-sans leading-relaxed">
+              Every execution of the legal retrieval layer is immutably logged for audit and regulatory compliance.
+            </p>
+
+            <div className="overflow-x-auto flex-1 overflow-y-auto border border-border">
+              <table className="w-full text-left border-collapse text-xs font-mono">
+                <thead className="bg-page sticky top-0 border-b border-border text-[11px] uppercase tracking-eyebrow text-text-secondary">
+                  <tr>
+                    <th className="py-2.5 px-3">Timestamp</th>
+                    <th className="py-2.5 px-3">Remedy Option</th>
+                    <th className="py-2.5 px-3">Provisions</th>
+                    <th className="py-2.5 px-3">Precedents</th>
+                    <th className="py-2.5 px-3 text-right">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {explanationHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="py-8 text-center text-text-secondary">
+                        No prior explanation requests logged.
+                      </td>
+                    </tr>
+                  ) : (
+                    explanationHistory.map((item) => (
+                      <tr key={item.id} className="hover:bg-page/50">
+                        <td className="py-2.5 px-3 text-text-secondary">
+                          {formatDate(item.created_at)}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold uppercase">
+                          <Badge variant={item.remedy_type === 'withdraw' ? 'primary' : 'warning'}>
+                            {item.remedy_type}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-3 text-text-primary">
+                          {item.retrieved_provision_ids?.length || 0} Provisions
+                        </td>
+                        <td className="py-2.5 px-3 text-text-primary">
+                          {item.retrieved_precedent_ids?.length || 0} Orders
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-bold">
+                          <Badge variant={item.confidence_flag === 'grounded' ? 'primary' : 'warning'}>
+                            {item.confidence_flag}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowExplanationHistoryModal(false)}
+                className="px-4 py-2 border border-border text-xs font-mono uppercase tracking-wider text-text-secondary hover:bg-page transition-colors"
+              >
+                Close History
               </button>
             </div>
           </div>

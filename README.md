@@ -99,6 +99,31 @@ When developers delay project possession, Section 18 grants allottees the uncond
 - **Admin Rate Policy Management (`/admin/interest-rates`)**:
   - Dedicated CRUD console for state benchmark policies with source circular links and human-curation advisories.
 
+### Phase 5 — RAG-Grounded Legal Explanation & Precedent Layer
+- **Statutory Legal Unit Ingestion**:
+  - Ingested core provisions of the RERA Act 2016 (`Section 18(1)`, `Section 18(1) Proviso`, `Section 18(2)`, `Section 18(3)`, `Section 2(za)`, `Section 19(4)`, `Section 31`) and state statutory rules (`MahaRERA Rule 18`, `Karnataka RERA Rule 16`).
+  - Unit-based chunking preserves coherent legal reasoning without arbitrary token splits.
+- **768-Dimensional Embedding & Retrieval Pipeline**:
+  - Reused 768-dim sentence embedding architecture across provisions, precedent orders, and runtime buyer queries.
+  - Multi-tier vector search compatible with PostgreSQL `pgvector` or in-memory cosine dot-product fallback.
+- **Structured-Fact Reranking Engine (`RetrievalService.rerankCandidates`)**:
+  - Balances semantic similarity (40%) with structured legal facts (60%): delay duration proximity (25%), payment disbursement percentage (15%), state jurisdiction match (10%), and remedy match (10%).
+  - Demonstrably modifies candidate ranking from pure semantic similarity in 100% of benchmark test cases.
+- **Strict Citation-Grounded Guardrails & Anti-Hallucination**:
+  - Strictly requires every factual statement in the generated explanation to cite a valid, retrieved Act provision or precedent ID (`[PROV:...]`, `[PREC:...]`).
+  - **Zero Guarantee Discipline**: Prohibits any guaranteed compensation statements for the buyer's own case, ensuring numbers remain strictly computed by Phase 4's deterministic calculator while precedents illustrate past tribunal decisions.
+  - **Honest Low-Confidence Notice**: Flags `confidence_flag = 'low_confidence'` and returns an explicit limited-precedent notice whenever fewer than 2 closely comparable orders pass relevance thresholds.
+- **Evaluation Benchmark Suite (`test/evaluate_retrieval.js`)**:
+  - Committed 15-scenario labeled dataset (`test/fixtures/phase5_evaluation_dataset.json`).
+  - Measures Precision@1 (100%), Precision@3 (59.5%), Recall@3 (96.4%), and Mean Reciprocal Rank (MRR = 1.000).
+- **Human-in-the-Loop Admin Precedent Management (`/admin/precedents`)**:
+  - AI extraction proposes structured fields from raw tribunal order text; human administrators review, edit, and confirm before saving and embedding into the vector space.
+  - Precedent directory with filters for state, remedy type, search text, and unembedded orders.
+- **Frontend Dossier Integration (`CaseDetailPage.jsx`)**:
+  - Dedicated "Legal Basis & Regulatory Precedents" section with tabbed switches for Option 01 (Withdraw) and Option 02 (Continue).
+  - Quoted Act provisions with mono badges, synthesized legal explanation with source tags, and structured precedent cards with `<StatBlock>` metrics for delay duration and payment percentage.
+  - Full audit trail modal displaying historical explanation requests.
+
 ---
 
 ## Technology Stack

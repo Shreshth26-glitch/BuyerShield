@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AdminSyncController } from '../controllers/adminSyncController.js';
 import { AdminPolicyController } from '../controllers/adminPolicyController.js';
+import { AdminPrecedentController } from '../controllers/adminPrecedentController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -30,6 +31,13 @@ router.get('/interest-rates/:id', AdminPolicyController.getPolicyById);
 router.post('/interest-rates', AdminPolicyController.createPolicy);
 router.put('/interest-rates/:id', AdminPolicyController.updatePolicy);
 router.delete('/interest-rates/:id', AdminPolicyController.deletePolicy);
+
+// Admin Precedent Management routes
+router.post('/precedents/extract', AdminPrecedentController.extractPrecedent);
+router.get('/precedents', AdminPrecedentController.listPrecedents);
+router.post('/precedents', AdminPrecedentController.createPrecedent);
+router.put('/precedents/:id', AdminPrecedentController.updatePrecedent);
+router.delete('/precedents/:id', AdminPrecedentController.deletePrecedent);
 
 export default router;
 
